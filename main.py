@@ -57,7 +57,7 @@ def send_message_to_gemini(message):
                 return "عذرًا، حدث خطأ في معالجة الرد. يرجى المحاولة لاحقًا."
         else:
             print(f"خطأ في الطلب: {response.status_code}, {response.text}")
-            return "عذرًا، حدث خطأ أثناء معالجة طلبك."
+            return f"عذرًا، حدث خطأ أثناء معالجة طلبك. (رمز الخطأ: {response.status_code})"
     except Exception as e:
         print(f"خطأ عام: {e}")
         return "عذرًا، حدث خطأ أثناء معالجة طلبك."
