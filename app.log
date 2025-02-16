@@ -44,3 +44,33 @@
  * Running on http://127.0.0.1:5000
 2025-02-16 20:12:39,389 INFO: [33mPress CTRL+C to quit[0m
 2025-02-16 20:12:39,391 INFO:  * Restarting with stat
+2025-02-16 20:23:37,461 INFO: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8080
+2025-02-16 20:23:37,462 INFO: [33mPress CTRL+C to quit[0m
+2025-02-16 20:23:37,465 INFO:  * Restarting with stat
+2025-02-16 20:41:31,292 INFO: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8080
+2025-02-16 20:41:31,292 INFO: [33mPress CTRL+C to quit[0m
+2025-02-16 20:41:31,295 INFO:  * Restarting with stat
+2025-02-16 20:41:33,323 WARNING:  * Debugger is active!
+2025-02-16 20:41:33,341 INFO:  * Debugger PIN: 431-924-586
+2025-02-16 20:41:47,661 INFO: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8080
+2025-02-16 20:41:47,662 INFO: [33mPress CTRL+C to quit[0m
+2025-02-16 20:41:47,664 INFO:  * Restarting with stat
+2025-02-16 20:41:50,408 WARNING:  * Debugger is active!
+2025-02-16 20:41:50,426 INFO:  * Debugger PIN: 431-924-586
+2025-02-16 20:43:05,197 INFO: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2025-02-16 20:43:05,198 INFO: [33mPress CTRL+C to quit[0m
+2025-02-16 20:43:05,200 INFO:  * Restarting with stat
+2025-02-16 20:43:07,210 WARNING:  * Debugger is active!
+2025-02-16 20:43:07,222 INFO:  * Debugger PIN: 431-924-586
+2025-02-16 20:46:34,163 WARNING:  * Debugger is active!
+2025-02-16 20:46:34,175 INFO:  * Debugger PIN: 431-924-586
+2025-02-16 20:46:41,293 INFO: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8080
+2025-02-16 20:46:41,294 INFO: [33mPress CTRL+C to quit[0m
+2025-02-16 20:46:41,296 INFO:  * Restarting with stat
+2025-02-16 20:46:43,287 WARNING:  * Debugger is active!
+2025-02-16 20:46:43,300 INFO:  * Debugger PIN: 431-924-586
