@@ -16,6 +16,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- إضافة أيقونات Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- إضافة مكتبة Lottie -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -51,7 +53,7 @@
             background: #1e1e1e;
         }
         .chat-header {
-            background: #007bff;
+            background: linear-gradient(135deg, #007bff, #6f42c1);
             color: white;
             padding: 15px;
             text-align: center;
@@ -67,6 +69,10 @@
         .chat-header i {
             font-size: 1.5rem;
             cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .chat-header i:hover {
+            transform: scale(1.2);
         }
         .chat-box {
             flex: 1;
@@ -82,41 +88,55 @@
             margin: 10px 0;
             display: flex;
             align-items: flex-start;
+            position: relative;
         }
         .message img {
             width: 40px;
             height: 40px;
             border-radius: 50%;
             margin: 0 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         .message-content {
             max-width: 70%;
             padding: 10px;
-            border-radius: 8px;
+            border-radius: 16px;
             position: relative;
+            animation: fadeIn 0.5s ease-in-out;
         }
         .user-message {
             justify-content: flex-end;
         }
         .user-message .message-content {
-            background: #007bff;
+            background: linear-gradient(135deg, #007bff, #6f42c1);
             color: white;
             align-self: flex-end;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         .bot-message {
             justify-content: flex-start;
         }
         .bot-message .message-content {
-            background: #ffffff;
+            background: linear-gradient(135deg, #ffffff, #e6f7ff);
             color: black;
             align-self: flex-start;
             border: 1px solid #ddd;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         body.dark-mode .bot-message .message-content {
-            background: #1e1e1e;
+            background: linear-gradient(135deg, #1e1e1e, #333);
             color: #ccc;
             border: 1px solid #333;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         pre {
             background: #2d2d2d;
@@ -162,32 +182,54 @@
         .input-box button {
             margin-left: 10px;
             padding: 10px 15px;
-            background-color: #007bff;
+            background: linear-gradient(135deg, #007bff, #6f42c1);
             color: white;
             border: none;
             border-radius: 20px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background 0.3s ease;
         }
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
+        .input-box button:hover {
+            background: linear-gradient(135deg, #6f42c1, #007bff);
         }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        /* قائمة منبثقة */
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+            min-width: 150px;
+        }
+        .context-menu li {
+            list-style: none;
+            padding: 10px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .context-menu li:hover {
+            background: #f0f0f0;
+        }
+        /* مؤشر التحميل */
+        .loading-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            z-index: 1000;
+            display: none;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
         }
         /* زر التمرير */
         .scroll-btn {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: #007bff;
+            background: linear-gradient(135deg, #007bff, #6f42c1);
             color: white;
             border: none;
             border-radius: 50%;
@@ -201,7 +243,7 @@
             transition: background 0.3s ease;
         }
         .scroll-btn:hover {
-            background: #0056b3;
+            background: linear-gradient(135deg, #6f42c1, #007bff);
         }
     </style>
 </head>
@@ -211,6 +253,7 @@
             <i class="fas fa-robot"></i> Chatbot
             <div>
                 <i class="fas fa-trash-alt" id="clear-chat" title="مسح المحادثة"></i>
+                <i class="fas fa-sync-alt" id="clear-context" title="مسح السياق"></i>
                 <i class="fas fa-moon" id="dark-mode-toggle" title="وضع الظلام"></i>
             </div>
         </div>
@@ -223,11 +266,43 @@
         </div>
     </div>
 
+    <!-- قائمة منبثقة -->
+    <ul class="context-menu" id="context-menu">
+        <li onclick="copyMessage()">Copy</li>
+        <li onclick="editMessage()">Edit Message</li>
+        <li onclick="deleteMessage()">Delete</li>
+    </ul>
+
+    <!-- مؤشر التحميل -->
+    <div class="loading-animation" id="loading-animation"></div>
+
     <!-- زر التمرير -->
     <button class="scroll-btn" id="scroll-to-bottom"><i class="fas fa-arrow-down"></i></button>
     <button class="scroll-btn" id="scroll-to-top" style="bottom: 70px;"><i class="fas fa-arrow-up"></i></button>
 
     <script>
+        // تهيئة Lottie Animation
+        const loadingAnimationContainer = document.getElementById('loading-animation');
+        const loadingAnimation = lottie.loadAnimation({
+            container: loadingAnimationContainer,
+            renderer: 'svg',
+            loop: true,
+            autoplay: false,
+            path: 'https://raw.githubusercontent.com/ChatbootProjet/chatboot/refs/heads/main/Assets/aio.json' // رابط مباشر للرسوم المتحركة
+        });
+
+        // إظهار مؤشر التحميل
+        function showLoadingAnimation() {
+            loadingAnimationContainer.style.display = 'block';
+            loadingAnimation.play();
+        }
+
+        // إخفاء مؤشر التحميل
+        function hideLoadingAnimation() {
+            loadingAnimationContainer.style.display = 'none';
+            loadingAnimation.stop();
+        }
+
         // إضافة رسالة جديدة إلى مربع الدردشة
         function addMessage(sender, message) {
             const chatBox = document.getElementById("chat-box");
@@ -277,6 +352,22 @@
                 messageDiv.appendChild(messageContent);
             }
 
+            // إضافة خاصية Context Menu
+            messageDiv.addEventListener("contextmenu", (e) => {
+                e.preventDefault();
+                const menu = document.getElementById("context-menu");
+                menu.style.top = `${e.pageY}px`;
+                menu.style.left = `${e.pageX}px`;
+                menu.dataset.messageId = messageDiv.id;
+                menu.style.display = "block";
+            });
+
+            // إخفاء القائمة عند النقر خارجها
+            document.addEventListener("click", () => {
+                const menu = document.getElementById("context-menu");
+                menu.style.display = "none";
+            });
+
             chatBox.appendChild(messageDiv);
 
             // تحريك شريط التمرير إلى الأسفل
@@ -284,6 +375,36 @@
 
             // تحديث Prism.js لتطبيق Syntax Highlighting
             Prism.highlightAll();
+        }
+
+        // نسخ الرسالة
+        function copyMessage() {
+            const menu = document.getElementById("context-menu");
+            const messageId = menu.dataset.messageId;
+            const messageDiv = document.getElementById(messageId);
+            const messageText = messageDiv.querySelector(".message-content").innerText;
+            navigator.clipboard.writeText(messageText).then(() => {
+                alert("تم نسخ الرسالة!");
+            });
+        }
+
+        // تعديل الرسالة وإعادة إرسالها
+        function editMessage() {
+            const menu = document.getElementById("context-menu");
+            const messageId = menu.dataset.messageId;
+            const messageDiv = document.getElementById(messageId);
+            const messageText = messageDiv.querySelector(".message-content").innerText;
+            document.getElementById("user-input").value = messageText;
+            menu.style.display = "none";
+        }
+
+        // حذف الرسالة
+        function deleteMessage() {
+            const menu = document.getElementById("context-menu");
+            const messageId = menu.dataset.messageId;
+            const messageDiv = document.getElementById(messageId);
+            messageDiv.remove();
+            menu.style.display = "none";
         }
 
         // إرسال الرسالة باستخدام AJAX
@@ -295,6 +416,9 @@
                 // إضافة رسالة المستخدم إلى واجهة المستخدم
                 addMessage("user", userInput);
 
+                // إظهار مؤشر التحميل
+                showLoadingAnimation();
+
                 // إرسال الرسالة إلى الخادم عبر AJAX
                 $.ajax({
                     url: "/send_message",
@@ -305,7 +429,11 @@
                         addMessage("bot", response.bot_response);
                     },
                     error: function () {
-                        addMessage("bot", "عذرًا، حدث خطأ أثناء معالجة طلبك.");
+                        addMessage("bot", "عذرًا، حدث خطأ أثناء معالجة طلبك. ❌");
+                    },
+                    complete: function () {
+                        // إخفاء مؤشر التحميل بعد انتهاء الطلب
+                        hideLoadingAnimation();
                     }
                 });
 
@@ -324,6 +452,20 @@
             $("#clear-chat").click(function () {
                 const chatBox = document.getElementById("chat-box");
                 chatBox.innerHTML = ""; // مسح جميع الرسائل
+            });
+
+            // زر مسح السياق
+            $("#clear-context").click(function () {
+                $.ajax({
+                    url: "/clear_context",
+                    method: "POST",
+                    success: function (response) {
+                        alert(response.message); // عرض رسالة نجاح مسح السياق
+                    },
+                    error: function () {
+                        alert("حدث خطأ أثناء مسح السياق.");
+                    }
+                });
             });
 
             // زر التبديل بين الوضع العادي والوضع المظلم
