@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import requests
-from langdetect import detect
-from config import SYSTEM_PROMPT, GOOGLE_SEARCH_API_KEY, GOOGLE_SEARCH_ENGINE_ID, NEWS_API_KEY
+from langdetect import detect, LangDetectException
+from config import SYSTEM_PROMPT, GOOGLE_SEARCH_API_KEY, GOOGLE_SEARCH_ENGINE_ID
 
 # Initialize Flask
 app = Flask(__name__)
@@ -23,7 +23,7 @@ def process_user_input(user_input):
     # Detect language of the input
     try:
         language = detect(user_input)
-    except:
+    except LangDetectException:
         language = "en"  # Default to English if detection fails
 
     # Check if the user is asking for time or date
@@ -48,25 +48,18 @@ def send_message_to_gemini(message, language):
         conversation_history.insert(0, {"role": "model", "parts": [{"text": SYSTEM_PROMPT}]})
 
     url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
-    headers = {
-        "Content-Type": "application/json"
-    }
-    data = {
-        "contents": conversation_history
-    }
-    params = {
-        "key": "AIzaSyByJMeVo9xbPAp_n-Iy1c5I8IBpD-lSLV8"  # Replace with your Gemini API key
-    }
+    headers = {"Content-Type": "application/json"}
+    data = {"contents": conversation_history}
+    params = {"key": "AIzaSyByJMeVo9xbPAp_n-Iy1c5I8IBpD-lSLV8"}  # Replace with your Gemini API key
+
     try:
         response = requests.post(url, headers=headers, json=data, params=params)
         if response.status_code == 200:
             try:
-                # Check response structure
                 bot_response = response.json()["candidates"][0]["content"]["parts"][0]["text"]
 
                 # Ensure the bot identifies itself as Ai-O
-                bot_response = bot_response.replace("Gemini", "Ai-O").replace("gemini", "Ai-O")
-                bot_response = bot_response.replace("Google", "AIO").replace("google", "AIO")
+                bot_response = bot_response.replace("Gemini", "Ai-O").replace("Google", "AIO")
 
                 # Translate the response to the detected language if needed
                 if language != "en":
@@ -76,18 +69,9 @@ def send_message_to_gemini(message, language):
                 conversation_history.append({"role": "model", "parts": [{"text": bot_response}]})
                 return bot_response
             except KeyError as e:
-                # If the response doesn't contain the expected keys
                 print(f"Error in response structure: {e}")
-                print(f"Full response: {response.json()}")
                 return "Sorry, there was an error processing the response. Please try again later. ❌"
-        elif response.status_code == 400:
-            # Handle Bad Request (400) error
-            error_message = response.json().get("error", {}).get("message", "Unknown error.")
-            print(f"Error 400: {error_message}")
-            return f"Sorry, there was an error with the request. Details: {error_message} ❌"
         else:
-            # Handle other errors
-            print(f"Request error: {response.status_code}, {response.text}")
             return f"Sorry, there was an error processing your request. (Error code: {response.status_code}) ❌"
     except Exception as e:
         print(f"General error: {e}")
@@ -102,16 +86,12 @@ def get_time_and_date(language):
             data = response.json()
             current_time = data.get("datetime", "")
             timezone = data.get("timezone", "UTC")
-
-            # Format the response
             if language == "ar":
-                bot_response = f"الوقت الحالي هو: {current_time[:19]} (بالتوقيت العالمي UTC)."
+                return f"الوقت الحالي هو: {current_time[:19]} (بالتوقيت العالمي UTC)."
             elif language == "fr":
-                bot_response = f"L'heure actuelle est: {current_time[:19]} (Heure universelle UTC)."
+                return f"L'heure actuelle est: {current_time[:19]} (Heure universelle UTC)."
             else:
-                bot_response = f"The current time is: {current_time[:19]} (UTC)."
-
-            return bot_response
+                return f"The current time is: {current_time[:19]} (UTC)."
         else:
             return "Sorry, there was an error fetching the current time. Please try again later. ❌"
     except Exception as e:
@@ -132,14 +112,18 @@ def search_web(query, language):
             data = response.json()
             items = data.get("items", [])
             if items:
-                result = "Here are some results I found:\n"
+                result = "<div class='search-results'>"
                 for i, item in enumerate(items[:3], start=1):  # Show top 3 results
                     title = item.get("title", "No title")
                     link = item.get("link", "#")
                     snippet = item.get("snippet", "No description available.")
-                    result += f"{i}. [{title}]({link})\n   {snippet}\n\n"
-                
-                # Translate the result to the detected language if needed
+                    result += f"""
+                        <div class='search-result'>
+                            <a href='{link}' target='_blank'><h3>{title}</h3></a>
+                            <p>{snippet}</p>
+                        </div>
+                    """
+                result += "</div>"
                 if language != "en":
                     result = translate_text(result, language)
                 return result
@@ -157,7 +141,7 @@ def translate_text(text, target_language):
     params = {
         "q": text,
         "target": target_language,
-        "key": GOOGLE_SEARCH_API_KEY  # Replace with your Google Translate API key
+        "key": GOOGLE_SEARCH_API_KEY
     }
     try:
         response = requests.post(url, params=params)
@@ -169,12 +153,6 @@ def translate_text(text, target_language):
     except Exception as e:
         print(f"Translation error: {e}")
         return text
-
-@app.route("/clear_context", methods=["POST"])
-def clear_context():
-    global conversation_history
-    conversation_history = []  # Clear current context
-    return jsonify({"status": "success", "message": "Context cleared successfully."})
 
 if __name__ == "__main__":
     app.run(debug=True)
