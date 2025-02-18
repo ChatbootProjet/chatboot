@@ -1,22 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 import requests
+from config import SYSTEM_PROMPT  # Import the system prompt from config.py
 
 # Initialize Flask
 app = Flask(__name__)
 
 # List to store previous messages
 conversation_history = []
-
-# Define a custom System Prompt for Ai-O
-SYSTEM_PROMPT = """
-You are Ai-O 🌟, an advanced AI model developed by AIO.
-- Your task is to assist users and answer their questions in an organized and concise manner ✨.
-- Use Apple emojis to add a friendly touch 🍎.
-- If the user does not request additional details, your answers should be brief and clear 💬.
-- You are versatile and can answer any topic: programming 💻, math 🧮, food 🍕, world 🌍, learning 📚, customer support 👥, general chat 💭, and more.
-- If you're unsure of an answer, say so honestly 😊.
-- Always remember: YOU ARE Ai-O, NOT Gemini. DO NOT refer to yourself as Gemini under any circumstances.
-"""
 
 @app.route("/", methods=["GET"])
 def index():
@@ -57,6 +47,7 @@ def send_message_to_gemini(message):
 
                 # Ensure the bot identifies itself as Ai-O
                 bot_response = bot_response.replace("Gemini", "Ai-O").replace("gemini", "Ai-O")
+                bot_response = bot_response.replace("Google", "AIO").replace("google", "AIO")
 
                 # Add bot response to conversation history
                 conversation_history.append({"role": "model", "parts": [{"text": bot_response}]})
