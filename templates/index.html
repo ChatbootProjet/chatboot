@@ -381,18 +381,21 @@
             // Place the message in the input box
             document.getElementById("user-input").value = messageText;
 
-            // Remove the old message
-            messageDiv.remove();
+            // Remove the old message and its corresponding bot response
+            const chatBox = document.getElementById("chat-box");
+            const nextMessage = messageDiv.nextElementSibling;
+            if (nextMessage && nextMessage.classList.contains("bot-message")) {
+                nextMessage.remove(); // Remove the bot's reply
+            }
+            messageDiv.remove(); // Remove the user's message
 
             // Hide the context menu
             menu.style.display = "none";
 
-            // Remove the bot's reply associated with the message
-            const chatBox = document.getElementById("chat-box");
-            const nextMessage = messageDiv.nextElementSibling;
-            if (nextMessage && nextMessage.classList.contains("bot-message")) {
-                nextMessage.remove();
-            }
+            // Remove the message from localStorage
+            const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            const updatedMessages = savedMessages.filter(msg => msg.message !== messageText);
+            localStorage.setItem("chatHistory", JSON.stringify(updatedMessages));
         }
 
         // Delete message
@@ -401,21 +404,20 @@
             const messageId = menu.dataset.messageId;
             const messageDiv = document.getElementById(messageId);
 
-            // Remove the message
-            messageDiv.remove();
-
-            // Remove the bot's reply associated with the message
+            // Remove the message and its corresponding bot response
             const chatBox = document.getElementById("chat-box");
             const nextMessage = messageDiv.nextElementSibling;
             if (nextMessage && nextMessage.classList.contains("bot-message")) {
-                nextMessage.remove();
+                nextMessage.remove(); // Remove the bot's reply
             }
+            messageDiv.remove(); // Remove the user's message
 
             // Hide the context menu
             menu.style.display = "none";
 
             // Remove the message from localStorage
             const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            const messageText = messageDiv.querySelector(".message-content").innerText;
             const updatedMessages = savedMessages.filter(msg => msg.message !== messageText);
             localStorage.setItem("chatHistory", JSON.stringify(updatedMessages));
         }
