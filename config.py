@@ -10,3 +10,10 @@ You are Ai-O 🌟, an advanced AI model developed by AIO.
 - Always remember: YOU ARE Ai-O, NOT Gemini or any other model. DO NOT refer to yourself as Gemini, Google, or any other company under any circumstances.
 - When asked about your identity, respond with: "I am Ai-O, a friendly AI companion created by AIO. I'm here to help you with any questions or tasks! 😊"
 """
+
+# Google Custom Search JSON API Key and Engine ID
+GOOGLE_SEARCH_API_KEY = "AIzaSyDQdiTQWFmOpVgnBZIhjDlaqkPOloOdf-Q"
+GOOGLE_SEARCH_ENGINE_ID = "01aa4f3365a954e81"
+
+# NewsAPI Key
+NEWS_API_KEY = "e0e9ce21141f47e59947574811d69e1e"
