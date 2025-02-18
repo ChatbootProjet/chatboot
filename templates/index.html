@@ -16,6 +16,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <!-- Include Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Include Lottie Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -78,6 +80,7 @@
             overflow-y: auto;
             background-color: #f9f9f9;
             transition: background 0.5s ease;
+            position: relative;
         }
         body.dark-mode .chat-box {
             background-color: #121212;
@@ -87,6 +90,8 @@
             display: flex;
             align-items: flex-start;
             position: relative;
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in-out forwards;
         }
         .message img {
             width: 40px;
@@ -100,7 +105,6 @@
             padding: 10px;
             border-radius: 16px;
             position: relative;
-            animation: fadeIn 0.5s ease-in-out;
         }
         .user-message {
             justify-content: flex-end;
@@ -213,8 +217,9 @@
         /* Toast Notification */
         .toast {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background: #4caf50;
             color: white;
             padding: 10px 20px;
@@ -222,6 +227,71 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             display: none;
             z-index: 1000;
+            align-items: center;
+            gap: 10px;
+        }
+        .toast i {
+            font-size: 1.2rem;
+        }
+        /* Loading Animation */
+        #loading-animation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150px;
+            height: 150px;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+            display: none;
+        }
+        /* Delete Confirmation Dialog */
+        .delete-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .delete-dialog button {
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .delete-dialog button.confirm {
+            background: #f44336;
+            color: white;
+        }
+        .delete-dialog button.cancel {
+            background: #607d8b;
+            color: white;
+        }
+        /* Search Results */
+        .search-results {
+            margin-top: 10px;
+        }
+        .search-result {
+            margin-bottom: 10px;
+        }
+        .search-result a {
+            text-decoration: none;
+            color: #007bff;
+        }
+        .search-result h3 {
+            font-size: 1rem;
+            margin: 0;
+        }
+        .search-result p {
+            font-size: 0.9rem;
+            color: gray;
         }
     </style>
 </head>
@@ -231,7 +301,6 @@
             <i class="fas fa-robot"></i> Chatbot
             <div>
                 <i class="fas fa-plus" id="new-chat" title="New Chat"></i>
-                <i class="fas fa-sync-alt" id="clear-context" title="Clear Context"></i>
                 <i class="fas fa-moon" id="dark-mode-toggle" title="Dark Mode"></i>
             </div>
         </div>
@@ -244,17 +313,53 @@
         </div>
     </div>
 
+    <!-- Loading Animation -->
+    <div id="loading-animation"></div>
+
     <!-- Context Menu -->
     <ul class="context-menu" id="context-menu">
         <li onclick="copyMessage()">Copy</li>
         <li id="edit-option" onclick="editMessage()">Edit Message</li>
-        <li id="delete-option" onclick="deleteMessage()">Delete</li>
+        <li id="delete-option" onclick="confirmDelete()">Delete</li>
     </ul>
 
     <!-- Toast Notification -->
-    <div class="toast" id="toast">Copied!</div>
+    <div class="toast" id="toast"><i class="fas fa-check-circle"></i> Copied!</div>
+
+    <!-- Delete Confirmation Dialog -->
+    <div class="delete-dialog" id="delete-dialog">
+        <p>Are you sure you want to delete this message?</p>
+        <div style="display: flex; gap: 10px;">
+            <button class="confirm" onclick="deleteMessage()">Yes</button>
+            <button class="cancel" onclick="closeDeleteDialog()">No</button>
+        </div>
+    </div>
 
     <script>
+        // Initialize Lottie Animation
+        const loadingAnimationContainer = document.getElementById('loading-animation');
+        const loadingAnimation = lottie.loadAnimation({
+            container: loadingAnimationContainer,
+            renderer: 'svg',
+            loop: true,
+            autoplay: false,
+            path: 'https://raw.githubusercontent.com/ChatbootProjet/chatboot/refs/heads/main/Assets/aio.json'
+        });
+
+        // Show Loading Animation
+        function showLoadingAnimation() {
+            loadingAnimationContainer.style.display = 'block';
+            loadingAnimation.play();
+            document.getElementById("send-button").innerHTML = '<i class="fas fa-stop"></i>';
+        }
+
+        // Hide Loading Animation
+        function hideLoadingAnimation() {
+            loadingAnimationContainer.style.display = 'none';
+            loadingAnimation.stop();
+            document.getElementById("send-button").innerHTML = '<i class="fas fa-paper-plane"></i>';
+        }
+
         // Load chat history from localStorage
         function loadChatHistory() {
             const chatBox = document.getElementById("chat-box");
@@ -275,7 +380,7 @@
         function addMessage(sender, message, saveToLocalStorage = true) {
             const chatBox = document.getElementById("chat-box");
             const messageDiv = document.createElement("div");
-            messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message", "fade-in");
+            messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message");
             messageDiv.id = `message-${Date.now()}`; // Add a unique ID to each message
 
             // Convert Markdown text to HTML
@@ -376,26 +481,88 @@
             const menu = document.getElementById("context-menu");
             const messageId = menu.dataset.messageId;
             const messageDiv = document.getElementById(messageId);
-            const messageText = messageDiv.querySelector(".message-content").innerText;
+            const messageContent = messageDiv.querySelector(".message-content");
 
-            // Place the message in the input box
-            document.getElementById("user-input").value = messageText;
+            // Replace message content with an input field
+            const originalMessage = messageContent.innerText;
+            messageContent.innerHTML = `
+                <input type="text" id="edit-input" value="${originalMessage}" style="width: 100%; padding: 5px; margin-bottom: 5px;">
+                <button id="save-edit">Save</button>
+                <button id="cancel-edit">Cancel</button>
+            `;
 
-            // Remove the old message and its corresponding bot response
-            const chatBox = document.getElementById("chat-box");
-            const nextMessage = messageDiv.nextElementSibling;
-            if (nextMessage && nextMessage.classList.contains("bot-message")) {
-                nextMessage.remove(); // Remove the bot's reply
-            }
-            messageDiv.remove(); // Remove the user's message
+            // Handle Save action
+            document.getElementById("save-edit").onclick = () => {
+                const editedMessage = document.getElementById("edit-input").value.trim();
+                if (editedMessage) {
+                    // Update the message content
+                    messageContent.innerText = editedMessage;
 
-            // Hide the context menu
+                    // Remove all subsequent messages
+                    let nextMessage = messageDiv.nextElementSibling;
+                    while (nextMessage) {
+                        const temp = nextMessage.nextElementSibling;
+                        nextMessage.remove();
+                        nextMessage = temp;
+                    }
+
+                    // Update localStorage
+                    const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
+                    const updatedMessages = savedMessages.filter(msg => msg.message !== originalMessage);
+                    updatedMessages.push({ sender: "user", message: editedMessage });
+                    localStorage.setItem("chatHistory", JSON.stringify(updatedMessages));
+
+                    // Re-enable sending messages
+                    document.getElementById("user-input").disabled = false;
+
+                    // Send the edited message to the server
+                    sendEditedMessage(editedMessage);
+                }
+            };
+
+            // Handle Cancel action
+            document.getElementById("cancel-edit").onclick = () => {
+                // Restore original message content
+                messageContent.innerText = originalMessage;
+
+                // Re-enable sending messages
+                document.getElementById("user-input").disabled = false;
+            };
+
+            // Disable sending new messages while editing
+            document.getElementById("user-input").disabled = true;
+        }
+
+        // Send edited message to the server
+        function sendEditedMessage(message) {
+            showLoadingAnimation();
+
+            // Simulate sending the message to the server via AJAX
+            $.ajax({
+                url: "/send_message",
+                method: "POST",
+                data: { user_input: message },
+                success: function (response) {
+                    addMessage("bot", response.bot_response);
+                    hideLoadingAnimation();
+                },
+                error: function () {
+                    addMessage("bot", "Sorry, there was an error processing your request. ❌");
+                    hideLoadingAnimation();
+                }
+            });
+        }
+
+        // Confirm deletion
+        function confirmDelete() {
+            const menu = document.getElementById("context-menu");
             menu.style.display = "none";
+            document.getElementById("delete-dialog").style.display = "flex";
+        }
 
-            // Remove the message from localStorage
-            const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
-            const updatedMessages = savedMessages.filter(msg => msg.message !== messageText);
-            localStorage.setItem("chatHistory", JSON.stringify(updatedMessages));
+        // Close delete confirmation dialog
+        function closeDeleteDialog() {
+            document.getElementById("delete-dialog").style.display = "none";
         }
 
         // Delete message
@@ -412,21 +579,21 @@
             }
             messageDiv.remove(); // Remove the user's message
 
-            // Hide the context menu
-            menu.style.display = "none";
-
             // Remove the message from localStorage
             const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
             const messageText = messageDiv.querySelector(".message-content").innerText;
             const updatedMessages = savedMessages.filter(msg => msg.message !== messageText);
             localStorage.setItem("chatHistory", JSON.stringify(updatedMessages));
+
+            // Close the delete dialog
+            closeDeleteDialog();
         }
 
         // Show Toast Notification
         function showToast(message) {
             const toast = document.getElementById("toast");
-            toast.innerText = message;
-            toast.style.display = "block";
+            toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            toast.style.display = "flex";
             setTimeout(() => {
                 toast.style.display = "none";
             }, 2000);
@@ -441,6 +608,9 @@
                 const userInput = $("#user-input").val().trim();
                 if (!userInput) return;
 
+                // Show loading animation
+                showLoadingAnimation();
+
                 // Add user message to UI
                 addMessage("user", userInput);
 
@@ -450,11 +620,12 @@
                     method: "POST",
                     data: { user_input: userInput },
                     success: function (response) {
-                        // Add bot response to UI
                         addMessage("bot", response.bot_response);
+                        hideLoadingAnimation();
                     },
                     error: function () {
                         addMessage("bot", "Sorry, there was an error processing your request. ❌");
+                        hideLoadingAnimation();
                     }
                 });
 
@@ -474,20 +645,6 @@
                 const chatBox = document.getElementById("chat-box");
                 chatBox.innerHTML = ""; // Clear all messages
                 localStorage.removeItem("chatHistory"); // Clear local storage
-            });
-
-            // Clear Context button
-            $("#clear-context").click(function () {
-                $.ajax({
-                    url: "/clear_context",
-                    method: "POST",
-                    success: function (response) {
-                        alert(response.message); // Show success message for clearing context
-                    },
-                    error: function () {
-                        alert("An error occurred while clearing the context.");
-                    }
-                });
             });
 
             // Toggle Dark Mode
