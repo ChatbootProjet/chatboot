@@ -4,20 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatbot</title>
-    <!-- إضافة مكتبة marked.js -->
+    <!-- Include marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- إضافة jQuery -->
+    <!-- Include jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <!-- إضافة Prism.js لتسليط الضوء على بناء الجملة -->
+    <!-- Include Prism.js for syntax highlighting -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-    <!-- إضافة خطوط Google Fonts -->
+    <!-- Include Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <!-- إضافة أيقونات Font Awesome -->
+    <!-- Include Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- إضافة مكتبة Lottie -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.6/lottie.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -192,7 +190,7 @@
         .input-box button:hover {
             background: linear-gradient(135deg, #6f42c1, #007bff);
         }
-        /* قائمة منبثقة */
+        /* Context Menu */
         .context-menu {
             position: absolute;
             background: white;
@@ -212,38 +210,18 @@
         .context-menu li:hover {
             background: #f0f0f0;
         }
-        /* مؤشر التحميل */
-        .loading-animation {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 150px;
-            height: 150px;
-            z-index: 1000;
-            display: none;
-            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
-        }
-        /* زر التمرير */
-        .scroll-btn {
+        /* Toast Notification */
+        .toast {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: linear-gradient(135deg, #007bff, #6f42c1);
+            background: #4caf50;
             color: white;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: background 0.3s ease;
-        }
-        .scroll-btn:hover {
-            background: linear-gradient(135deg, #6f42c1, #007bff);
+            display: none;
+            z-index: 1000;
         }
     </style>
 </head>
@@ -252,82 +230,70 @@
         <div class="chat-header">
             <i class="fas fa-robot"></i> Chatbot
             <div>
-                <i class="fas fa-trash-alt" id="clear-chat" title="مسح المحادثة"></i>
-                <i class="fas fa-sync-alt" id="clear-context" title="مسح السياق"></i>
-                <i class="fas fa-moon" id="dark-mode-toggle" title="وضع الظلام"></i>
+                <i class="fas fa-plus" id="new-chat" title="New Chat"></i>
+                <i class="fas fa-sync-alt" id="clear-context" title="Clear Context"></i>
+                <i class="fas fa-moon" id="dark-mode-toggle" title="Dark Mode"></i>
             </div>
         </div>
         <div class="chat-box" id="chat-box">
-            <!-- الرسائل ستظهر هنا -->
+            <!-- Messages will appear here -->
         </div>
         <div class="input-box">
-            <input type="text" id="user-input" placeholder="اكتب سؤالك هنا..." required>
+            <input type="text" id="user-input" placeholder="Type your message here..." required>
             <button id="send-button"><i class="fas fa-paper-plane"></i></button>
         </div>
     </div>
 
-    <!-- قائمة منبثقة -->
+    <!-- Context Menu -->
     <ul class="context-menu" id="context-menu">
         <li onclick="copyMessage()">Copy</li>
-        <li onclick="editMessage()">Edit Message</li>
-        <li onclick="deleteMessage()">Delete</li>
+        <li id="edit-option" onclick="editMessage()">Edit Message</li>
+        <li id="delete-option" onclick="deleteMessage()">Delete</li>
     </ul>
 
-    <!-- مؤشر التحميل -->
-    <div class="loading-animation" id="loading-animation"></div>
-
-    <!-- زر التمرير -->
-    <button class="scroll-btn" id="scroll-to-bottom"><i class="fas fa-arrow-down"></i></button>
-    <button class="scroll-btn" id="scroll-to-top" style="bottom: 70px;"><i class="fas fa-arrow-up"></i></button>
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Copied!</div>
 
     <script>
-        // تهيئة Lottie Animation
-        const loadingAnimationContainer = document.getElementById('loading-animation');
-        const loadingAnimation = lottie.loadAnimation({
-            container: loadingAnimationContainer,
-            renderer: 'svg',
-            loop: true,
-            autoplay: false,
-            path: 'https://raw.githubusercontent.com/ChatbootProjet/chatboot/refs/heads/main/Assets/aio.json' // رابط مباشر للرسوم المتحركة
-        });
-
-        // إظهار مؤشر التحميل
-        function showLoadingAnimation() {
-            loadingAnimationContainer.style.display = 'block';
-            loadingAnimation.play();
+        // Load chat history from localStorage
+        function loadChatHistory() {
+            const chatBox = document.getElementById("chat-box");
+            const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            savedMessages.forEach(({ sender, message }) => {
+                addMessage(sender, message, false); // Do not save again to localStorage
+            });
         }
 
-        // إخفاء مؤشر التحميل
-        function hideLoadingAnimation() {
-            loadingAnimationContainer.style.display = 'none';
-            loadingAnimation.stop();
+        // Save chat history to localStorage
+        function saveChatHistory(sender, message) {
+            const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            savedMessages.push({ sender, message });
+            localStorage.setItem("chatHistory", JSON.stringify(savedMessages));
         }
 
-        // إضافة رسالة جديدة إلى مربع الدردشة
-        function addMessage(sender, message) {
+        // Add a new message to the chat box
+        function addMessage(sender, message, saveToLocalStorage = true) {
             const chatBox = document.getElementById("chat-box");
             const messageDiv = document.createElement("div");
             messageDiv.classList.add("message", sender === "user" ? "user-message" : "bot-message", "fade-in");
+            messageDiv.id = `message-${Date.now()}`; // Add a unique ID to each message
 
-            // تحويل النص المكتوب بتنسيق Markdown إلى HTML
-            let parsedMessage = message;
-            if (sender === "bot") {
-                parsedMessage = marked.parse(message); // تحويل Markdown إلى HTML
-            }
+            // Convert Markdown text to HTML
+            let parsedMessage = marked.parse(message); // Convert Markdown to HTML
 
-            // إضافة صورة البروفايل
+            // Add profile image
             const profileImage = document.createElement("img");
             profileImage.src = sender === "user" 
                 ? "https://raw.githubusercontent.com/ChatbootProjet/chatboot/refs/heads/main/Assets/user.png" 
                 : "https://raw.githubusercontent.com/ChatbootProjet/chatboot/refs/heads/main/Assets/bot.png";
-            profileImage.alt = sender === "user" ? "المستخدم" : "البوت";
+            profileImage.alt = sender === "user" ? "User" : "Bot";
 
-            // إضافة محتوى الرسالة
+            // Add message content
             const messageContent = document.createElement("div");
             messageContent.classList.add("message-content");
             messageContent.innerHTML = parsedMessage;
 
-            // إضافة زر النسخ لكل كتلة من الكود
+            // Add copy button for code blocks
             const codeBlocks = messageContent.querySelectorAll("pre");
             codeBlocks.forEach((codeBlock) => {
                 const copyBtn = document.createElement("button");
@@ -336,14 +302,13 @@
                 copyBtn.onclick = () => {
                     const codeText = codeBlock.querySelector("code").innerText;
                     navigator.clipboard.writeText(codeText).then(() => {
-                        copyBtn.classList.add("copied");
-                        setTimeout(() => copyBtn.classList.remove("copied"), 2000);
+                        showToast("Copied!");
                     });
                 };
                 codeBlock.appendChild(copyBtn);
             });
 
-            // ترتيب العناصر داخل الرسالة
+            // Arrange elements inside the message
             if (sender === "user") {
                 messageDiv.appendChild(messageContent);
                 messageDiv.appendChild(profileImage);
@@ -352,17 +317,30 @@
                 messageDiv.appendChild(messageContent);
             }
 
-            // إضافة خاصية Context Menu
+            // Add Context Menu functionality
             messageDiv.addEventListener("contextmenu", (e) => {
                 e.preventDefault();
                 const menu = document.getElementById("context-menu");
                 menu.style.top = `${e.pageY}px`;
                 menu.style.left = `${e.pageX}px`;
                 menu.dataset.messageId = messageDiv.id;
+                menu.dataset.sender = sender;
+
+                // Show or hide options based on the sender
+                const editOption = document.getElementById("edit-option");
+                const deleteOption = document.getElementById("delete-option");
+                if (sender === "user") {
+                    editOption.style.display = "block";
+                    deleteOption.style.display = "block";
+                } else {
+                    editOption.style.display = "none";
+                    deleteOption.style.display = "none";
+                }
+
                 menu.style.display = "block";
             });
 
-            // إخفاء القائمة عند النقر خارجها
+            // Hide the context menu when clicking outside
             document.addEventListener("click", () => {
                 const menu = document.getElementById("context-menu");
                 menu.style.display = "none";
@@ -370,121 +348,151 @@
 
             chatBox.appendChild(messageDiv);
 
-            // تحريك شريط التمرير إلى الأسفل
+            // Scroll to the bottom
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            // تحديث Prism.js لتطبيق Syntax Highlighting
+            // Update Prism.js for syntax highlighting
             Prism.highlightAll();
+
+            // Save message to localStorage if needed
+            if (saveToLocalStorage) {
+                saveChatHistory(sender, message);
+            }
         }
 
-        // نسخ الرسالة
+        // Copy message
         function copyMessage() {
             const menu = document.getElementById("context-menu");
             const messageId = menu.dataset.messageId;
             const messageDiv = document.getElementById(messageId);
             const messageText = messageDiv.querySelector(".message-content").innerText;
             navigator.clipboard.writeText(messageText).then(() => {
-                alert("تم نسخ الرسالة!");
+                showToast("Copied!");
             });
         }
 
-        // تعديل الرسالة وإعادة إرسالها
+        // Edit message
         function editMessage() {
             const menu = document.getElementById("context-menu");
             const messageId = menu.dataset.messageId;
             const messageDiv = document.getElementById(messageId);
             const messageText = messageDiv.querySelector(".message-content").innerText;
+
+            // Place the message in the input box
             document.getElementById("user-input").value = messageText;
+
+            // Remove the old message
+            messageDiv.remove();
+
+            // Hide the context menu
             menu.style.display = "none";
+
+            // Remove the bot's reply associated with the message
+            const chatBox = document.getElementById("chat-box");
+            const nextMessage = messageDiv.nextElementSibling;
+            if (nextMessage && nextMessage.classList.contains("bot-message")) {
+                nextMessage.remove();
+            }
         }
 
-        // حذف الرسالة
+        // Delete message
         function deleteMessage() {
             const menu = document.getElementById("context-menu");
             const messageId = menu.dataset.messageId;
             const messageDiv = document.getElementById(messageId);
+
+            // Remove the message
             messageDiv.remove();
+
+            // Remove the bot's reply associated with the message
+            const chatBox = document.getElementById("chat-box");
+            const nextMessage = messageDiv.nextElementSibling;
+            if (nextMessage && nextMessage.classList.contains("bot-message")) {
+                nextMessage.remove();
+            }
+
+            // Hide the context menu
             menu.style.display = "none";
+
+            // Remove the message from localStorage
+            const savedMessages = JSON.parse(localStorage.getItem("chatHistory")) || [];
+            const updatedMessages = savedMessages.filter(msg => msg.message !== messageText);
+            localStorage.setItem("chatHistory", JSON.stringify(updatedMessages));
         }
 
-        // إرسال الرسالة باستخدام AJAX
+        // Show Toast Notification
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.style.display = "block";
+            setTimeout(() => {
+                toast.style.display = "none";
+            }, 2000);
+        }
+
+        // Send message using AJAX
         $(document).ready(function () {
+            // Load chat history on page load
+            loadChatHistory();
+
             $("#send-button").click(function () {
                 const userInput = $("#user-input").val().trim();
                 if (!userInput) return;
 
-                // إضافة رسالة المستخدم إلى واجهة المستخدم
+                // Add user message to UI
                 addMessage("user", userInput);
 
-                // إظهار مؤشر التحميل
-                showLoadingAnimation();
-
-                // إرسال الرسالة إلى الخادم عبر AJAX
+                // Send message to server via AJAX
                 $.ajax({
                     url: "/send_message",
                     method: "POST",
                     data: { user_input: userInput },
                     success: function (response) {
-                        // إضافة رد البوت إلى واجهة المستخدم
+                        // Add bot response to UI
                         addMessage("bot", response.bot_response);
                     },
                     error: function () {
-                        addMessage("bot", "عذرًا، حدث خطأ أثناء معالجة طلبك. ❌");
-                    },
-                    complete: function () {
-                        // إخفاء مؤشر التحميل بعد انتهاء الطلب
-                        hideLoadingAnimation();
+                        addMessage("bot", "Sorry, there was an error processing your request. ❌");
                     }
                 });
 
-                // مسح مربع الإدخال
+                // Clear input box
                 $("#user-input").val("");
             });
 
-            // إرسال الرسالة عند الضغط على Enter
+            // Send message when pressing Enter
             $("#user-input").keypress(function (e) {
                 if (e.which === 13) {
                     $("#send-button").click();
                 }
             });
 
-            // زر مسح المحادثة
-            $("#clear-chat").click(function () {
+            // New Chat button
+            $("#new-chat").click(function () {
                 const chatBox = document.getElementById("chat-box");
-                chatBox.innerHTML = ""; // مسح جميع الرسائل
+                chatBox.innerHTML = ""; // Clear all messages
+                localStorage.removeItem("chatHistory"); // Clear local storage
             });
 
-            // زر مسح السياق
+            // Clear Context button
             $("#clear-context").click(function () {
                 $.ajax({
                     url: "/clear_context",
                     method: "POST",
                     success: function (response) {
-                        alert(response.message); // عرض رسالة نجاح مسح السياق
+                        alert(response.message); // Show success message for clearing context
                     },
                     error: function () {
-                        alert("حدث خطأ أثناء مسح السياق.");
+                        alert("An error occurred while clearing the context.");
                     }
                 });
             });
 
-            // زر التبديل بين الوضع العادي والوضع المظلم
+            // Toggle Dark Mode
             let isDarkMode = false;
             $("#dark-mode-toggle").click(function () {
                 isDarkMode = !isDarkMode;
                 document.body.classList.toggle("dark-mode", isDarkMode);
-            });
-
-            // زر التمرير إلى الأعلى
-            $("#scroll-to-top").click(function () {
-                const chatBox = document.getElementById("chat-box");
-                chatBox.scrollTop = 0; // التمرير إلى الأعلى
-            });
-
-            // زر التمرير إلى الأسفل
-            $("#scroll-to-bottom").click(function () {
-                const chatBox = document.getElementById("chat-box");
-                chatBox.scrollTop = chatBox.scrollHeight; // التمرير إلى الأسفل
             });
         });
     </script>
